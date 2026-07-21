@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학교 생활 및 진로·진학 자동 안내 시스템</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 480px;
+            height: 90vh;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 헤더 디자인 */
+        .chat-header {
+            background: #1e3a8a;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .chat-header p {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        /* 메시지 창 디자인 */
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background-color: #f8fafc;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .bot-message {
+            background-color: #ffffff;
+            color: #1e293b;
+            align-self: flex-start;
+            border: 1px solid #e2e8f0;
+            border-bottom-left-radius: 2px;
+        }
+
+        .user-message {
+            background-color: #2563eb;
+            color: #ffffff;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        /* 입력창 디자인 */
+        .chat-input-area {
+            padding: 16px;
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"]:focus {
+            border-color: #2563eb;
+        }
+
+        button {
+            padding: 12px 20px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <h2>OO고 지능형 학사·진로 안내 도우미</h2>
+        <p>자율주제 탐구 프로젝트 프로토타입</p>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+        <div class="message bot-message">
+            안녕하세요! 영광고등학교 학사 일정 및 진로·진학 안내 도우미입니다.<br>
+            궁금하신 과목 정보나 학사 일정을 입력해 주세요.
+        </div>
+    </div>
+
+    <div class="chat-input-area">
+        <input type="text" id="userInput" placeholder="질문을 입력하세요..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">전송</button>
+    </div>
+</div>
+
+<script>
+    // 1. [보고서 내용 반영] 지식 베이스 (Knowledge Base)
+    const knowledgeBase = [
+        {
+            keywords: ["물리학", "물리", "물1", "물리학1"],
+            answer: "【물리학Ⅰ】\n- 구분: 2학년 선택 과목\n- 특징: 공학 및 자연과학 계열 진학 희망자 권장 과목입니다."
+        },
+        {
+            keywords: ["중간고사", "시험", "지필평가", "시험일정"],
+            answer: "【1학기 중간고사 일정】\n- 기간: 4월 28일(화) ~ 5월1일(금)\n- 세부 시간표는 학급 공지사항을 참조해 주세요."
+        },
+        {
+            keywords: ["성적", "평가", "수행평가", "비율"],
+            answer: "【성적 산출 규정】\n- 일반 교과 기준: 지필평가 50% + 수행평가 50% 합산 반영됩니다."
+        },
+        {
+            keywords: ["동아리", "창체"],
+            answer: "【동아리 활동 안내】\n- 동아리 변경 신청은 매 학기 초 2주간 가능합니다."
+        }
+    ];
+
+    // 2. [보고서 내용 반영] 예외 처리 문구 (Constraint Error Message)
+    const fallbackResponse = "죄송합니다. 요청하신 질문에 대한 공식 데이터가 지식 베이스에 없습니다.\n학사 및 진학 관련 세부 사항은 본관 3층 진로상담실을 방문해 주시기 바랍니다.";
+
+    // 메시지 전송 로직
+    function sendMessage() {
+        const inputField = document.getElementById('userInput');
+        const question = inputField.value.trim();
+
+        if (question === "") return;
+
+        // 사용자 메시지 표시
+        appendMessage(question, 'user-message');
+        inputField.value = '';
+
+        // 챗봇 응답 연산 (알고리즘 구현)
+        setTimeout(() => {
+            const answer = findAnswer(question);
+            appendMessage(answer, 'bot-message');
+        }, 300);
+    }
+
+    // 3. [보고서 내용 반영] 매칭 알고리즘 함수
+    function findAnswer(userQuery) {
+        // 입력 키워드 매칭
+        for (let item of knowledgeBase) {
+            for (let keyword of item.keywords) {
+                if (userQuery.includes(keyword)) {
+                    return item.answer; // 매칭 성공 시 해당 노드 답변 출력
+                }
+            }
+        }
+        // 매칭 실패 시 왜곡 방지 예외 로직 작동
+        return fallbackResponse;
+    }
+
+    // 화면에 메시지 추가
+    function appendMessage(text, className) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${className}`;
+        messageDiv.innerText = text;
+        chatMessages.appendChild(messageDiv);
+        
+        // 스크롤 맨 아래로 이동
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // 엔터키 입력 처리
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+</script>
+
+</body>
+</html>
